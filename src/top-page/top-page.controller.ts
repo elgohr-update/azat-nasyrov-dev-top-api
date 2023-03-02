@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Logger,
   NotFoundException,
   Param,
   Patch,
@@ -18,10 +19,14 @@ import { CreateTopPageDto } from './dto/create-top-page.dto';
 import { IdValidationPipe } from '../pipes/id-validation.pipe';
 import { NOT_FOUND_TOP_PAGE_ERROR } from './top-page.constants';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { HhService } from '../hh/hh.service';
 
 @Controller('top-page')
 export class TopPageController {
-  constructor(private readonly topPageService: TopPageService) {}
+  constructor(
+    private readonly topPageService: TopPageService,
+    private readonly hhService: HhService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('create')
@@ -84,5 +89,26 @@ export class TopPageController {
   @Get('textSearch/:text')
   async textSearch(@Param('text') text: string) {
     return this.topPageService.findByText(text);
+  }
+
+  @Post('test')
+  async test() {
+    const data = await this.topPageService.findForHhUpdate(new Date());
+
+    for (let page of data) {
+      const hhData = await this.hhService.getData(page.category);
+      Logger.log(hhData);
+      page.hh = hhData;
+      await this.sleep();
+      await this.topPageService.updateById(page._id, page);
+    }
+  }
+
+  sleep() {
+    return new Promise<void>((resolve, reject) => {
+      setTimeout(() => {
+        resolve();
+      }, 1000);
+    });
   }
 }
